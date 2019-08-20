@@ -1,7 +1,22 @@
 <h1>Template Manager</h1>
-<form>
+<form id='editor_form'>
     <div class='form-group'>
         {{form.filename.label}}
-        {{form.filename}}
+        {{form.filename(class_="form-control")}}
+    </div>
+    <div class='form-group'>
+        {% for field in form.template_type %}
+        <div class='form-check form-check-inline'>
+        {{field(class_="form-check-input")}} 
+        {{field.label(class_="form-check-label")}}
+        </div>
+        {% endfor %}
+    </div>
+    <div class='form-group'>
+        {{form.template_data(class_="form-control")}}
+    </div>
+    <div class='form-group text-right'>
+        {{form.submit_fetch(class_="btn btn-primary")}}
+        {{form.submit_save(class_="btn btn-primary")}}
     </div>
 </form>

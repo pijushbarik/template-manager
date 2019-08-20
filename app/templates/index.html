@@ -3,13 +3,92 @@
     <title>Template Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='bootstrap.min.css')}}">
+    <script src="{{url_for('static', filename='jquery-3.4.1.min.js')}}"></script>
+    <style>
+        #template_data {
+            font-family: monospace;
+            resize: vertical;
+            background-color: #212121;
+            color: #ddd;
+        }
+    </style>
 </head>
 <body>
-    <div class='container'>
+    <div class='container-fluid'>
         <div class='row'>
             <div class='col-md-6'>{% include 'editor.html' %}</div>
             <div class='col-md-6'>{% include 'preview.html' %}</div>
         </div>
     </div>
 </body>
+
+<script>
+    $(document).ready(function() {
+        var initialHtml = `
+        <html>
+        <head>
+        <style>
+        body {
+            background-color: #212121;
+            color: #ddd;
+            font-family: sans-serif;
+            text-align: center;
+        }
+        </style>
+        </head>
+        <body>
+            <p>Type a file name and fetch to preview</p>
+            <p>Or, type a filename, write a HTML code to preview</p>
+        </body>
+        </html>
+        `
+        $('#template_data').val(initialHtml);
+        $('#preview_iframe').attr('srcdoc', initialHtml);
+    });
+
+    $('#editor_form').on('submit', function(e){
+        var filename = $('#filename').val();
+        var btn_clicked = $(document.activeElement).val()
+        e.preventDefault();
+        if(btn_clicked === 'Fetch') {
+            $.ajax({
+                url: `/api/template/${filename}`,
+                success: function(data) {
+                    console.log('received:', data);
+                    if(!$.isEmptyObject(data)) {
+                        $('#preview_iframe').attr('srcdoc', data.data);
+                        $('#template_data').val(data.data);
+                    } else {
+                        $('#preview_iframe').attr('srcdoc', `<p style="color: red">No file found named ${filename}</p>`)
+                    }
+                }
+            });
+        } else if (btn_clicked === 'Save') {
+            data = $('#template_data').val();
+            if(data.length === 0) {
+                alert("Add some code");
+            } else {
+                var obj = {
+                    filename: filename,
+                    data: data
+                };
+                $.ajax({
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    type: 'POST',
+                    url: '/api/template',
+                    data: JSON.stringify(obj),
+                    success: function(data) {
+                        alert(data.message);
+                        $('#preview_iframe').attr('srcdoc', obj.data);
+                    },
+                    error: function(data) {
+                        alert("Can not save");
+                    }
+                });
+            }
+        }
+    });
+</script>
+
 </html>
