@@ -16,3 +16,7 @@ Run flask app
 ```python
 flask run
 ```
+To access the app, open the following link in the browser
+```
+http://localhost:5000
+```
