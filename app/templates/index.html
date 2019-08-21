@@ -38,7 +38,7 @@
         </head>
         <body>
             <p>Type a file name and fetch to preview</p>
-            <p>Or, type a filename, write a HTML code to preview</p>
+            <p>Or, type a company name, write some HTML code  and save to preview</p>
         </body>
         </html>
         `
@@ -47,29 +47,36 @@
     });
 
     $('#editor_form').on('submit', function(e){
-        var filename = $('#filename').val();
-        var btn_clicked = $(document.activeElement).val()
         e.preventDefault();
+        var company = $('#company').val();
+        var temp_type = $('input[name=template_type]:checked').val();
+        console.log(temp_type);
+        var btn_clicked = $(document.activeElement).val();
+
         if(btn_clicked === 'Fetch') {
             $.ajax({
-                url: `/api/template/${filename}`,
+                url: `/api/template/${company}/${temp_type}`,
                 success: function(data) {
                     console.log('received:', data);
                     if(!$.isEmptyObject(data)) {
                         $('#preview_iframe').attr('srcdoc', data.data);
                         $('#template_data').val(data.data);
                     } else {
-                        $('#preview_iframe').attr('srcdoc', `<p style="color: red">No file found named ${filename}</p>`)
+                        $('#preview_iframe').attr('srcdoc', 
+                        `<p style="display: inline-block; padding: 5px; background-color: #b71c1c; color: #fff;
+                        width: 80%; border-radius: 5px; font-family: sans-serif;">No company found named ${company} 
+                        or there are no templates under this company</p>`)
                     }
                 }
             });
         } else if (btn_clicked === 'Save') {
-            data = $('#template_data').val();
+            var data = $('#template_data').val();
             if(data.length === 0) {
                 alert("Add some code");
             } else {
                 var obj = {
-                    filename: filename,
+                    company: company,
+                    ttype: temp_type,
                     data: data
                 };
                 $.ajax({
@@ -83,7 +90,7 @@
                         $('#preview_iframe').attr('srcdoc', obj.data);
                     },
                     error: function(data) {
-                        alert("Can not save");
+                        alert("Unable to save");
                     }
                 });
             }

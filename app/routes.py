@@ -1,40 +1,92 @@
 from flask import render_template, flash, request, redirect, url_for, jsonify
 from app import app, db
 from app.form import EditorForm
-from app.models import Template
+from app.models import Company, TemplateSuccess, TemplateFailure
+from sqlalchemy import exc
 import sys
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/')
 def indexFile():
-    print(request.method)
     form = EditorForm()
-    preview = {'data': 'Save or fetch to preview'}
     return render_template('index.html', form=form)
 
 @app.route('/api/template', methods=['POST'])
 def api_template_post():
     json_data = request.get_json()
-    template = db.session.query(Template).filter_by(name=json_data['filename']).first()
-    if template is None:
-        t = Template(name=json_data['filename'], data=str.encode(json_data['data']))
-        db.session.add(t)
-    else:
-        template.data = str.encode(json_data['data'])
+    # search for company
+    c = Company.query.filter_by(name=json_data['company']).first()
+    if c is None:
+        # does not exist
+        # create a new one
+        c = Company(name=json_data['company'])
+        db.session.add(c)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return jsonify(message='Unable to save data'), 500
+        # finally again set the value of c to the result of search query
+        # for later reference
+        c = Company.query.filter_by(name=json_data['company']).first()
+    
+    # set/update template data
+    if json_data['ttype'] == 'success':
+        # template type = success
+        # search for template
+        ts = db.session.query(TemplateSuccess).filter_by(company=c).first()
+        if ts is None:
+            # template does not exist
+            # create new one
+            ts = TemplateSuccess(company=c, data=str.encode(json_data['data']))
+            db.session.add(ts)
+        else:
+            # template does exist
+            # update data
+            ts.data = str.encode(json_data['data'])
+    elif json_data['ttype'] == 'failure':
+        # template type = failure
+        # search for template
+        tf = db.session.query(TemplateSuccess).filter_by(company=c).first()
+        if tf is None:
+            # template does not exist
+            # create new one
+            tf = TemplateFailure(company=c, data=str.encode(json_data['data']))
+            db.session.add(tf)
+        else:
+            # template does exist
+            # update data
+            tf.data = str.encode(json_data['data'])
+    
+    # commit
     try:
         db.session.commit()
-        return jsonify(message='Saved successfully')
-    except:
+    except exc.SQLAlchemyError as err:
+        print(err)
         db.session.rollback()
-        return jsonify(message='Could not save. Try using another filename'), 500
-        
-        
+        return jsonify(message='Unable to save data'), 500
 
-@app.route('/api/template/<string:filename>')
-def api_template_get(filename):
-    template = Template.query.filter_by(name=filename).first()
-    if template is None:
-        return jsonify()
-    return jsonify(filename=template.name, data=bytes.decode(template.data))
+    return jsonify(message='Saved successfully')
 
+@app.route('/api/template/<string:company>/<string:ttype>')
+def api_template_get(company, ttype):
+    # search for company
+    c = Company.query.filter_by(name=company).first()
+    if c is not None:
+        # exist
+        if ttype == 'success':
+            # template type requested is success
+            # find template
+            t = TemplateSuccess.query.filter_by(company=c).first()
+            if t is not None:
+                # template found. return data
+                return jsonify(data=bytes.decode(t.data))
+        elif ttype == 'failure':
+            # template type requested is failure
+            # find template
+            t = TemplateFailure.query.filter_by(company=c).first()
+            if t is not None:
+                # template found. return data
+                return jsonify(data=bytes.decode(t.data))
+
+    # template not found
+    return jsonify()
