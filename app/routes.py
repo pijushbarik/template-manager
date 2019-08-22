@@ -19,15 +19,6 @@ def api_template_post():
         # does not exist
         # create a new one
         c = Company(name=json_data['company'])
-        db.session.add(c)
-        try:
-            db.session.commit()
-        except:
-            db.session.rollback()
-            return jsonify(message='Unable to save data'), 500
-        # finally again set the value of c to the result of search query
-        # for later reference
-        c = Company.query.filter_by(name=json_data['company']).first()
     
     # set/update template data
     if json_data['ttype'] == 'success':
@@ -46,7 +37,7 @@ def api_template_post():
     elif json_data['ttype'] == 'failure':
         # template type = failure
         # search for template
-        tf = db.session.query(TemplateSuccess).filter_by(company=c).first()
+        tf = db.session.query(TemplateFailure).filter_by(company=c).first()
         if tf is None:
             # template does not exist
             # create new one
